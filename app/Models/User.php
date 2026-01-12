@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
+use Laravel\Sanctum\HasApiTokens;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 use Spatie\Permission\Traits\HasRoles;
@@ -45,6 +46,7 @@ class User extends Authenticatable implements Auditable
     use SoftDeletes;
     use HasRoles;
     use AuditableTrait;
+    use HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
