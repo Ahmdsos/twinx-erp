@@ -13,6 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Step 1: Create the table without self-referencing FK
         Schema::create('cost_centers', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('company_id');
@@ -28,20 +29,23 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             
-            // Foreign Keys
+            // Foreign Key for company
             $table->foreign('company_id')
                 ->references('id')
                 ->on('companies')
                 ->onDelete('cascade');
             
+            // Indexes
+            $table->unique(['company_id', 'code']);
+            $table->index(['company_id', 'is_active']);
+        });
+
+        // Step 2: Add self-referencing FK in separate statement
+        Schema::table('cost_centers', function (Blueprint $table) {
             $table->foreign('parent_id')
                 ->references('id')
                 ->on('cost_centers')
                 ->onDelete('cascade');
-            
-            // Indexes
-            $table->unique(['company_id', 'code']);
-            $table->index(['company_id', 'is_active']);
         });
     }
 

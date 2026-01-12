@@ -1,7 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Factories;
 
+use App\Models\Branch;
+use App\Models\Company;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -11,6 +16,8 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
+    protected $model = User::class;
+
     /**
      * The current password being used by the factory.
      */
@@ -29,6 +36,11 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'is_super_admin' => false,
+            'is_active' => true,
+            'preferred_language' => 'ar',
+            'current_company_id' => null,
+            'current_branch_id' => null,
         ];
     }
 
@@ -39,6 +51,37 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Create a super admin user.
+     */
+    public function superAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_super_admin' => true,
+        ]);
+    }
+
+    /**
+     * Create an inactive user.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+        ]);
+    }
+
+    /**
+     * Set user's current company and branch context.
+     */
+    public function withTenant(Company $company, Branch $branch): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'current_company_id' => $company->id,
+            'current_branch_id' => $branch->id,
         ]);
     }
 }
