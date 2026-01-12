@@ -35,6 +35,12 @@ class ChartOfAccountsSeeder extends Seeder
             ]);
         }
 
+        // Skip if accounts already exist for this company
+        if (Account::where('company_id', $company->id)->exists()) {
+            $this->command->info('Chart of Accounts already exists for this company. Skipping...');
+            return;
+        }
+
         $this->seedAccounts($company);
     }
 
