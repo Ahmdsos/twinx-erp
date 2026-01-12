@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\PosController;
 use App\Http\Controllers\Api\V1\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -70,9 +72,21 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'tenant'])->group(function () {
     // Customers
     Route::apiResource('customers', CustomerController::class);
     
-    // TODO: Add more resources
-    // Route::apiResource('invoices', InvoiceController::class);
-    // Route::apiResource('suppliers', SupplierController::class);
-    // Route::apiResource('employees', EmployeeController::class);
+    // Dashboard
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/sales-kpis', [DashboardController::class, 'salesKpis']);
+        Route::get('/inventory-kpis', [DashboardController::class, 'inventoryKpis']);
+        Route::get('/finance-kpis', [DashboardController::class, 'financeKpis']);
+        Route::get('/top-products', [DashboardController::class, 'topProducts']);
+        Route::get('/top-customers', [DashboardController::class, 'topCustomers']);
+        Route::get('/sales-chart', [DashboardController::class, 'salesChart']);
+    });
+    
+    // POS
+    Route::prefix('pos')->group(function () {
+        Route::get('/products', [PosController::class, 'products']);
+        Route::get('/customers/search', [PosController::class, 'searchCustomers']);
+        Route::post('/sale', [PosController::class, 'quickSale']);
+    });
 });
 
