@@ -1,177 +1,213 @@
 <template>
-    <div class="min-h-screen bg-gray-100" dir="rtl">
-        <!-- Sidebar -->
-        <aside class="fixed inset-y-0 right-0 w-64 bg-gradient-to-b from-blue-800 to-blue-900 text-white">
-            <div class="p-4 border-b border-blue-700">
-                <h1 class="text-xl font-bold">TWINX ERP</h1>
-                <p class="text-blue-200 text-sm">نظام إدارة الموارد</p>
-            </div>
-            
-            <nav class="p-4">
-                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-700 mb-2">
-                    <span>📊</span>
-                    <span>لوحة التحكم</span>
-                </a>
-                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-700 mb-2">
-                    <span>📦</span>
-                    <span>المنتجات</span>
-                </a>
-                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-700 mb-2">
-                    <span>👥</span>
-                    <span>العملاء</span>
-                </a>
-                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-700 mb-2">
-                    <span>🧾</span>
-                    <span>الفواتير</span>
-                </a>
-                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-700 mb-2">
-                    <span>📈</span>
-                    <span>التقارير</span>
-                </a>
-                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-700 mb-2">
-                    <span>⚙️</span>
-                    <span>الإعدادات</span>
-                </a>
-            </nav>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="mr-64 p-8">
-            <!-- Header -->
-            <div class="mb-8">
+    <AdminLayout title="لوحة التحكم">
+        <template #header>
+            <div>
                 <h2 class="text-2xl font-bold text-gray-800">لوحة التحكم</h2>
                 <p class="text-gray-600">مرحباً بك في نظام TWINX ERP</p>
             </div>
+        </template>
+        
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-blue-100">مبيعات اليوم</p>
+                        <p class="text-3xl font-bold mt-2">{{ formatCurrency(kpis.todaySales) }}</p>
+                        <p class="text-blue-200 text-sm mt-1">{{ kpis.todayOrders }} طلب</p>
+                    </div>
+                    <span class="text-4xl">💰</span>
+                </div>
+            </div>
             
-            <!-- KPI Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-blue-100">المبيعات اليوم</p>
-                            <p class="text-3xl font-bold mt-2">{{ formatCurrency(kpis.sales) }}</p>
-                        </div>
-                        <span class="text-4xl">💰</span>
+            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-green-100">مبيعات الشهر</p>
+                        <p class="text-3xl font-bold mt-2">{{ formatCurrency(kpis.monthSales) }}</p>
+                        <p class="text-green-200 text-sm mt-1">+{{ kpis.monthGrowth }}% من الشهر السابق</p>
                     </div>
+                    <span class="text-4xl">📈</span>
                 </div>
-                
-                <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-green-100">الطلبات</p>
-                            <p class="text-3xl font-bold mt-2">{{ kpis.orders }}</p>
-                        </div>
-                        <span class="text-4xl">📦</span>
+            </div>
+            
+            <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-orange-100">فواتير معلقة</p>
+                        <p class="text-3xl font-bold mt-2">{{ kpis.pendingInvoices }}</p>
+                        <p class="text-orange-200 text-sm mt-1">{{ formatCurrency(kpis.pendingAmount) }}</p>
                     </div>
+                    <span class="text-4xl">⏳</span>
                 </div>
-                
-                <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-orange-100">فواتير معلقة</p>
-                            <p class="text-3xl font-bold mt-2">{{ kpis.pending }}</p>
-                        </div>
-                        <span class="text-4xl">⏳</span>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-purple-100">منتجات منخفضة المخزون</p>
+                        <p class="text-3xl font-bold mt-2">{{ kpis.lowStock }}</p>
+                        <p class="text-purple-200 text-sm mt-1">تحتاج إعادة طلب</p>
                     </div>
+                    <span class="text-4xl">📦</span>
                 </div>
-                
-                <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-purple-100">عملاء جدد</p>
-                            <p class="text-3xl font-bold mt-2">{{ kpis.newCustomers }}</p>
-                        </div>
-                        <span class="text-4xl">👥</span>
+            </div>
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Sales Chart -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">مبيعات الأسبوع</h3>
+                <div class="h-64 flex items-end gap-2">
+                    <div v-for="(day, index) in weeklyData" :key="index" class="flex-1 flex flex-col items-center">
+                        <div class="w-full bg-blue-500 rounded-t transition-all duration-500 hover:bg-blue-600"
+                             :style="{ height: (day.value / maxSales * 200) + 'px' }"></div>
+                        <span class="text-xs text-gray-500 mt-2">{{ day.day }}</span>
+                        <span class="text-xs font-medium">{{ formatCurrency(day.value) }}</span>
                     </div>
                 </div>
             </div>
             
-            <!-- Tables -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Recent Orders -->
-                <div class="bg-white rounded-xl shadow-sm p-6">
-                    <h3 class="text-lg font-semibold mb-4">أحدث الطلبات</h3>
-                    <table class="w-full">
-                        <thead>
-                            <tr class="text-right text-gray-500 border-b">
-                                <th class="pb-3">رقم الطلب</th>
-                                <th class="pb-3">العميل</th>
-                                <th class="pb-3">المبلغ</th>
-                                <th class="pb-3">الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="border-b">
-                                <td class="py-3">#1234</td>
-                                <td class="py-3">أحمد محمد</td>
-                                <td class="py-3">1,500 ر.س</td>
-                                <td class="py-3"><span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">مكتمل</span></td>
-                            </tr>
-                            <tr class="border-b">
-                                <td class="py-3">#1233</td>
-                                <td class="py-3">سارة علي</td>
-                                <td class="py-3">2,300 ر.س</td>
-                                <td class="py-3"><span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">قيد التنفيذ</span></td>
-                            </tr>
-                            <tr>
-                                <td class="py-3">#1232</td>
-                                <td class="py-3">محمد خالد</td>
-                                <td class="py-3">890 ر.س</td>
-                                <td class="py-3"><span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">مكتمل</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Top Products -->
-                <div class="bg-white rounded-xl shadow-sm p-6">
-                    <h3 class="text-lg font-semibold mb-4">أفضل المنتجات</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl">📱</div>
-                            <div class="flex-1">
-                                <p class="font-medium">آيفون 15 برو</p>
-                                <p class="text-sm text-gray-500">150 مبيعة</p>
+            <!-- Category Distribution -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">توزيع المبيعات حسب الفئة</h3>
+                <div class="space-y-4">
+                    <div v-for="cat in categoryData" :key="cat.name" class="flex items-center gap-4">
+                        <span class="text-2xl">{{ cat.emoji }}</span>
+                        <div class="flex-1">
+                            <div class="flex justify-between mb-1">
+                                <span class="font-medium">{{ cat.name }}</span>
+                                <span class="text-gray-500">{{ cat.percentage }}%</span>
                             </div>
-                            <p class="font-semibold text-green-600">45,000 ر.س</p>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">💻</div>
-                            <div class="flex-1">
-                                <p class="font-medium">ماك بوك برو</p>
-                                <p class="text-sm text-gray-500">85 مبيعة</p>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="h-2 rounded-full transition-all duration-500"
+                                     :class="cat.color"
+                                     :style="{ width: cat.percentage + '%' }"></div>
                             </div>
-                            <p class="font-semibold text-green-600">38,000 ر.س</p>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl">⌚</div>
-                            <div class="flex-1">
-                                <p class="font-medium">أبل واتش</p>
-                                <p class="text-sm text-gray-500">120 مبيعة</p>
-                            </div>
-                            <p class="font-semibold text-green-600">22,000 ر.س</p>
-                        </div>
+                        <span class="font-medium text-gray-600">{{ formatCurrency(cat.amount) }}</span>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+        
+        <!-- Tables Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Recent Orders -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">أحدث الطلبات</h3>
+                    <a href="/admin/invoices" class="text-blue-600 hover:underline text-sm">عرض الكل</a>
+                </div>
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-right text-gray-500 border-b">
+                            <th class="pb-3 font-medium">رقم الطلب</th>
+                            <th class="pb-3 font-medium">العميل</th>
+                            <th class="pb-3 font-medium">المبلغ</th>
+                            <th class="pb-3 font-medium">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="order in recentOrders" :key="order.id" class="border-b last:border-0">
+                            <td class="py-3 font-mono text-sm">{{ order.number }}</td>
+                            <td class="py-3">{{ order.customer }}</td>
+                            <td class="py-3 font-medium">{{ formatCurrency(order.amount) }}</td>
+                            <td class="py-3">
+                                <span :class="getStatusClass(order.status)">{{ getStatusText(order.status) }}</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Top Products -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">أفضل المنتجات</h3>
+                    <a href="/admin/products" class="text-blue-600 hover:underline text-sm">عرض الكل</a>
+                </div>
+                <div class="space-y-4">
+                    <div v-for="product in topProducts" :key="product.id" class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">
+                            {{ product.emoji }}
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium">{{ product.name }}</p>
+                            <p class="text-sm text-gray-500">{{ product.sold }} مبيعة</p>
+                        </div>
+                        <p class="font-semibold text-green-600">{{ formatCurrency(product.revenue) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </AdminLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 const kpis = ref({
-    sales: 125000,
-    orders: 45,
-    pending: 12,
-    newCustomers: 8
+    todaySales: 28500,
+    todayOrders: 45,
+    monthSales: 425000,
+    monthGrowth: 12,
+    pendingInvoices: 8,
+    pendingAmount: 35000,
+    lowStock: 5
 });
 
-const formatCurrency = (value) => {
-    return new Intl.NumberFormat('ar-SA', { 
-        style: 'decimal',
-        minimumFractionDigits: 0 
-    }).format(value) + ' ر.س';
+const weeklyData = ref([
+    { day: 'السبت', value: 35000 },
+    { day: 'الأحد', value: 42000 },
+    { day: 'الاثنين', value: 28000 },
+    { day: 'الثلاثاء', value: 51000 },
+    { day: 'الأربعاء', value: 39000 },
+    { day: 'الخميس', value: 45000 },
+    { day: 'الجمعة', value: 28500 },
+]);
+
+const maxSales = computed(() => Math.max(...weeklyData.value.map(d => d.value)));
+
+const categoryData = ref([
+    { name: 'إلكترونيات', emoji: '📱', percentage: 45, amount: 191250, color: 'bg-blue-500' },
+    { name: 'ملابس', emoji: '👕', percentage: 25, amount: 106250, color: 'bg-purple-500' },
+    { name: 'طعام', emoji: '🍔', percentage: 20, amount: 85000, color: 'bg-orange-500' },
+    { name: 'مشروبات', emoji: '🥤', percentage: 10, amount: 42500, color: 'bg-green-500' },
+]);
+
+const recentOrders = ref([
+    { id: 1, number: '#1234', customer: 'أحمد محمد', amount: 1500, status: 'paid' },
+    { id: 2, number: '#1233', customer: 'سارة علي', amount: 2300, status: 'issued' },
+    { id: 3, number: '#1232', customer: 'محمد خالد', amount: 890, status: 'paid' },
+    { id: 4, number: '#1231', customer: 'نورة سعد', amount: 3200, status: 'draft' },
+    { id: 5, number: '#1230', customer: 'عبدالله أحمد', amount: 1100, status: 'paid' },
+]);
+
+const topProducts = ref([
+    { id: 1, name: 'آيفون 15 برو', emoji: '📱', sold: 150, revenue: 675000 },
+    { id: 2, name: 'ماك بوك برو', emoji: '💻', sold: 85, revenue: 722500 },
+    { id: 3, name: 'أبل واتش', emoji: '⌚', sold: 120, revenue: 180000 },
+    { id: 4, name: 'سماعات AirPods', emoji: '🎧', sold: 200, revenue: 160000 },
+]);
+
+const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('ar-SA').format(amount) + ' ر.س';
+};
+
+const getStatusClass = (status) => {
+    const classes = {
+        paid: 'px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium',
+        issued: 'px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium',
+        draft: 'px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium',
+    };
+    return classes[status] || classes.draft;
+};
+
+const getStatusText = (status) => {
+    const texts = { paid: 'مدفوعة', issued: 'صادرة', draft: 'مسودة' };
+    return texts[status] || status;
 };
 </script>

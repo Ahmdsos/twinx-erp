@@ -37,7 +37,30 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            //
+            
+            // Auth user
+            'auth' => [
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                ] : null,
+            ],
+            
+            // Flash messages
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'info' => fn () => $request->session()->get('info'),
+            ],
+            
+            // App config
+            'app' => [
+                'name' => config('app.name', 'TWINX ERP'),
+                'locale' => app()->getLocale(),
+                'currency' => 'SAR',
+            ],
         ];
     }
 }
