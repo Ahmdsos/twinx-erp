@@ -1,201 +1,315 @@
 import React from 'react';
-import { Row, Col, Card, Statistic, Typography, Table, Tag, Space } from 'antd';
+import { Row, Col, Card, Table, Typography, Statistic, Alert, Select } from 'antd';
 import {
   ShoppingCartOutlined,
   DollarOutlined,
-  UserOutlined,
   InboxOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
-import { useSettingsStore, formatCurrency } from '../../../store/settings.store';
+import { useQuery } from '@tanstack/react-query';
+import { Line } from '@ant-design/charts';
+import dashboardApi from '../../../api/dashboard.api';
+import type { SalesChartData } from '../../../api/dashboard.api';
+import { formatCurrency } from '../../../store/settings.store';
+import { PageHeader } from '../../../components/common';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
-// Sample data
-const recentOrders = [
-  { key: '1', order: '#ORD-001', customer: 'أحمد محمد', total: 1500, status: 'completed', date: '2026-01-13' },
-  { key: '2', order: '#ORD-002', customer: 'محمد علي', total: 2300, status: 'processing', date: '2026-01-13' },
-  { key: '3', order: '#ORD-003', customer: 'سارة أحمد', total: 890, status: 'pending', date: '2026-01-12' },
-  { key: '4', order: '#ORD-004', customer: 'فاطمة خالد', total: 3200, status: 'completed', date: '2026-01-12' },
-  { key: '5', order: '#ORD-005', customer: 'خالد سعيد', total: 1750, status: 'cancelled', date: '2026-01-11' },
-];
+// Stats Card Component
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  prefix?: React.ReactNode;
+  suffix?: string;
+  change?: number;
+  loading?: boolean;
+  color?: string;
+}
 
-const topProducts = [
-  { key: '1', name: 'iPhone 14 Pro', sold: 45, revenue: 202500 },
-  { key: '2', name: 'Samsung Galaxy S23', sold: 38, revenue: 133000 },
-  { key: '3', name: 'MacBook Pro 14"', sold: 22, revenue: 154000 },
-  { key: '4', name: 'iPad Air', sold: 31, revenue: 77500 },
-  { key: '5', name: 'AirPods Pro', sold: 58, revenue: 58000 },
-];
-
-const statusColors: Record<string, string> = {
-  completed: 'green',
-  processing: 'blue',
-  pending: 'orange',
-  cancelled: 'red',
-};
-
-const statusLabels: Record<string, string> = {
-  completed: 'مكتمل',
-  processing: 'قيد التنفيذ',
-  pending: 'معلق',
-  cancelled: 'ملغي',
-};
+const StatCard: React.FC<StatCardProps> = ({ title, value, prefix, suffix, change, loading, color }) => (
+  <Card 
+    style={{ 
+      borderRadius: 12,
+      background: color ? `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)` : undefined,
+    }}
+    loading={loading}
+  >
+    <Statistic
+      title={<Text style={{ color: color ? 'rgba(255,255,255,0.85)' : undefined }}>{title}</Text>}
+      value={value}
+      prefix={prefix}
+      suffix={suffix}
+      valueStyle={{ color: color ? '#fff' : undefined, fontSize: 28 }}
+    />
+    {change !== undefined && (
+      <div style={{ marginTop: 8 }}>
+        {change >= 0 ? (
+          <Text style={{ color: color ? 'rgba(255,255,255,0.9)' : '#52c41a', fontSize: 12 }}>
+            <ArrowUpOutlined /> {Math.abs(change)}% من الشهر الماضي
+          </Text>
+        ) : (
+          <Text style={{ color: color ? 'rgba(255,255,255,0.9)' : '#ff4d4f', fontSize: 12 }}>
+            <ArrowDownOutlined /> {Math.abs(change)}% من الشهر الماضي
+          </Text>
+        )}
+      </div>
+    )}
+  </Card>
+);
 
 const DashboardPage: React.FC = () => {
-  const { currency } = useSettingsStore();
+  const [period, setPeriod] = React.useState<string>('month');
 
-  const orderColumns = [
-    { title: 'رقم الطلب', dataIndex: 'order', key: 'order' },
-    { title: 'العميل', dataIndex: 'customer', key: 'customer' },
+  // Fetch Sales KPIs
+  const { data: salesKPIs, isLoading: salesLoading, error: salesError } = useQuery({
+    queryKey: ['dashboard', 'sales-kpis', period],
+    queryFn: () => dashboardApi.getSalesKPIs(period),
+  });
+
+  // Fetch Inventory KPIs
+  const { data: inventoryKPIs, isLoading: inventoryLoading } = useQuery({
+    queryKey: ['dashboard', 'inventory-kpis'],
+    queryFn: () => dashboardApi.getInventoryKPIs(),
+  });
+
+  // Fetch Top Products
+  const { data: topProducts, isLoading: productsLoading } = useQuery({
+    queryKey: ['dashboard', 'top-products', period],
+    queryFn: () => dashboardApi.getTopProducts(5, period),
+  });
+
+  // Fetch Top Customers
+  const { data: topCustomers, isLoading: customersLoading } = useQuery({
+    queryKey: ['dashboard', 'top-customers', period],
+    queryFn: () => dashboardApi.getTopCustomers(5, period),
+  });
+
+  // Fetch Sales Chart
+  const { data: salesChart, isLoading: chartLoading } = useQuery({
+    queryKey: ['dashboard', 'sales-chart', period],
+    queryFn: () => dashboardApi.getSalesChart(period),
+  });
+
+  // Chart config
+  const chartConfig = {
+    data: salesChart?.data || [],
+    xField: 'date',
+    yField: 'sales',
+    smooth: true,
+    point: { size: 4, shape: 'circle' },
+    color: '#1890ff',
+    xAxis: { title: { text: 'التاريخ' } },
+    yAxis: { title: { text: 'المبيعات' } },
+    tooltip: {
+      formatter: (data: SalesChartData) => ({
+        name: 'المبيعات',
+        value: formatCurrency(data.sales),
+      }),
+    },
+  };
+
+  // Top Products columns
+  const productsColumns = [
     { 
-      title: 'المبلغ', 
-      dataIndex: 'total', 
-      key: 'total',
-      render: (value: number) => formatCurrency(value, currency),
+      title: '#', 
+      key: 'index',
+      width: 50,
+      render: (_: any, __: any, index: number) => index + 1,
     },
-    {
-      title: 'الحالة',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Tag color={statusColors[status]}>{statusLabels[status]}</Tag>
-      ),
-    },
-    { title: 'التاريخ', dataIndex: 'date', key: 'date' },
-  ];
-
-  const productColumns = [
     { title: 'المنتج', dataIndex: 'name', key: 'name' },
-    { title: 'المبيعات', dataIndex: 'sold', key: 'sold' },
+    { title: 'الكود', dataIndex: 'sku', key: 'sku' },
+    { 
+      title: 'الكمية المباعة', 
+      dataIndex: 'total_sold', 
+      key: 'total_sold',
+      render: (val: number) => val.toLocaleString('ar-SA'),
+    },
     { 
       title: 'الإيرادات', 
-      dataIndex: 'revenue', 
-      key: 'revenue',
-      render: (value: number) => formatCurrency(value, currency),
+      dataIndex: 'total_revenue', 
+      key: 'total_revenue',
+      render: (val: number) => formatCurrency(val),
     },
   ];
 
+  // Top Customers columns
+  const customersColumns = [
+    { 
+      title: '#', 
+      key: 'index',
+      width: 50,
+      render: (_: any, __: any, index: number) => index + 1,
+    },
+    { title: 'العميل', dataIndex: 'name', key: 'name' },
+    { 
+      title: 'عدد الطلبات', 
+      dataIndex: 'total_orders', 
+      key: 'total_orders',
+      render: (val: number) => val.toLocaleString('ar-SA'),
+    },
+    { 
+      title: 'إجمالي المشتريات', 
+      dataIndex: 'total_spent', 
+      key: 'total_spent',
+      render: (val: number) => formatCurrency(val),
+    },
+  ];
+
+  // Error handling
+  if (salesError) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Alert
+          message="خطأ في تحميل البيانات"
+          description="تعذر تحميل بيانات لوحة التحكم. تأكد من تشغيل الـ API."
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <Title level={3} style={{ marginBottom: 24 }}>لوحة التحكم</Title>
+    <div style={{ padding: 24 }}>
+      <PageHeader
+        title="لوحة التحكم"
+        subtitle="نظرة شاملة على أداء النظام"
+        extra={
+          <Select
+            value={period}
+            onChange={setPeriod}
+            style={{ width: 140 }}
+            options={[
+              { value: 'today', label: 'اليوم' },
+              { value: 'week', label: 'هذا الأسبوع' },
+              { value: 'month', label: 'هذا الشهر' },
+              { value: 'year', label: 'هذا العام' },
+            ]}
+          />
+        }
+      />
 
       {/* Stats Cards */}
-      <Row gutter={[24, 24]}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
-              border: 'none',
-              borderRadius: 12,
-            }}
-          >
+          <StatCard
+            title="إجمالي المبيعات"
+            value={formatCurrency(salesKPIs?.data?.total_sales || 0)}
+            prefix={<DollarOutlined />}
+            change={salesKPIs?.data?.sales_change}
+            loading={salesLoading}
+            color="#1890ff"
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <StatCard
+            title="عدد الطلبات"
+            value={salesKPIs?.data?.total_orders || 0}
+            prefix={<ShoppingCartOutlined />}
+            change={salesKPIs?.data?.orders_change}
+            loading={salesLoading}
+            color="#52c41a"
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <StatCard
+            title="إجمالي المنتجات"
+            value={inventoryKPIs?.data?.total_products || 0}
+            prefix={<InboxOutlined />}
+            loading={inventoryLoading}
+            color="#722ed1"
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <StatCard
+            title="مخزون منخفض"
+            value={inventoryKPIs?.data?.low_stock || 0}
+            prefix={<WarningOutlined />}
+            loading={inventoryLoading}
+            color="#fa8c16"
+          />
+        </Col>
+      </Row>
+
+      {/* Inventory Status Row */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={8}>
+          <Card>
             <Statistic
-              title={<Text style={{ color: 'rgba(255,255,255,0.8)' }}>مبيعات اليوم</Text>}
-              value={15420}
-              prefix={<DollarOutlined />}
-              suffix={currency.symbol}
-              valueStyle={{ color: '#fff', fontSize: 28 }}
+              title="متوفر في المخزون"
+              value={inventoryKPIs?.data?.in_stock || 0}
+              valueStyle={{ color: '#52c41a' }}
+              loading={inventoryLoading}
             />
-            <div style={{ marginTop: 8 }}>
-              <ArrowUpOutlined style={{ color: '#52c41a' }} />
-              <Text style={{ color: 'rgba(255,255,255,0.8)', marginRight: 4 }}>
-                12% من أمس
-              </Text>
-            </div>
           </Card>
         </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #52c41a 0%, #95de64 100%)',
-              border: 'none',
-              borderRadius: 12,
-            }}
-          >
+        <Col xs={24} sm={8}>
+          <Card>
             <Statistic
-              title={<Text style={{ color: 'rgba(255,255,255,0.8)' }}>الطلبات</Text>}
-              value={48}
-              prefix={<ShoppingCartOutlined />}
-              valueStyle={{ color: '#fff', fontSize: 28 }}
+              title="مخزون منخفض"
+              value={inventoryKPIs?.data?.low_stock || 0}
+              valueStyle={{ color: '#faad14' }}
+              loading={inventoryLoading}
             />
-            <div style={{ marginTop: 8 }}>
-              <ArrowUpOutlined style={{ color: '#fff' }} />
-              <Text style={{ color: 'rgba(255,255,255,0.8)', marginRight: 4 }}>
-                8 طلبات جديدة
-              </Text>
-            </div>
           </Card>
         </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #faad14 0%, #ffc53d 100%)',
-              border: 'none',
-              borderRadius: 12,
-            }}
-          >
+        <Col xs={24} sm={8}>
+          <Card>
             <Statistic
-              title={<Text style={{ color: 'rgba(255,255,255,0.8)' }}>العملاء</Text>}
-              value={256}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#fff', fontSize: 28 }}
+              title="نفد من المخزون"
+              value={inventoryKPIs?.data?.out_of_stock || 0}
+              valueStyle={{ color: '#ff4d4f' }}
+              loading={inventoryLoading}
             />
-            <div style={{ marginTop: 8 }}>
-              <ArrowUpOutlined style={{ color: '#fff' }} />
-              <Text style={{ color: 'rgba(255,255,255,0.8)', marginRight: 4 }}>
-                5 عملاء جدد
-              </Text>
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)',
-              border: 'none',
-              borderRadius: 12,
-            }}
-          >
-            <Statistic
-              title={<Text style={{ color: 'rgba(255,255,255,0.8)' }}>تنبيهات المخزون</Text>}
-              value={12}
-              prefix={<InboxOutlined />}
-              valueStyle={{ color: '#fff', fontSize: 28 }}
-            />
-            <div style={{ marginTop: 8 }}>
-              <ArrowDownOutlined style={{ color: '#fff' }} />
-              <Text style={{ color: 'rgba(255,255,255,0.8)', marginRight: 4 }}>
-                منتجات منخفضة
-              </Text>
-            </div>
           </Card>
         </Col>
       </Row>
 
-      {/* Tables */}
-      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-        <Col xs={24} lg={14}>
-          <Card title="أحدث الطلبات" style={{ borderRadius: 12 }}>
+      {/* Sales Chart */}
+      <Card
+        title="مخطط المبيعات"
+        style={{ marginBottom: 24, borderRadius: 12 }}
+        loading={chartLoading}
+      >
+        {salesChart?.data && salesChart.data.length > 0 ? (
+          <Line {...chartConfig} height={300} />
+        ) : (
+          <div style={{ textAlign: 'center', padding: 48 }}>
+            <Text type="secondary">لا توجد بيانات لعرضها</Text>
+          </div>
+        )}
+      </Card>
+
+      {/* Top Products & Top Customers */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card
+            title="أفضل المنتجات مبيعاً"
+            style={{ borderRadius: 12 }}
+          >
             <Table
-              columns={orderColumns}
-              dataSource={recentOrders}
+              columns={productsColumns}
+              dataSource={topProducts?.data || []}
+              loading={productsLoading}
               pagination={false}
+              rowKey="id"
               size="small"
             />
           </Card>
         </Col>
-
-        <Col xs={24} lg={10}>
-          <Card title="المنتجات الأكثر مبيعاً" style={{ borderRadius: 12 }}>
+        <Col xs={24} lg={12}>
+          <Card
+            title="أفضل العملاء"
+            style={{ borderRadius: 12 }}
+          >
             <Table
-              columns={productColumns}
-              dataSource={topProducts}
+              columns={customersColumns}
+              dataSource={topCustomers?.data || []}
+              loading={customersLoading}
               pagination={false}
+              rowKey="id"
               size="small"
             />
           </Card>

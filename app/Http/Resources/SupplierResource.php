@@ -7,7 +7,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CustomerResource extends JsonResource
+class SupplierResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
@@ -32,31 +32,22 @@ class CustomerResource extends JsonResource
             'city' => $this->city,
             'country' => $this->country,
             
-            // Pricing & Payment
-            'price_list_id' => $this->price_list_id,
-            'price_list' => $this->whenLoaded('priceList', function () {
-                return [
-                    'id' => $this->priceList->id,
-                    'name' => $this->priceList->name,
-                ];
-            }),
-            'credit_limit' => (float) $this->credit_limit,
+            // Payment
             'payment_terms' => $this->payment_terms,
             'payment_terms_label' => $this->getPaymentTermsLabel(),
             
             // Accounting
-            'receivable_account_id' => $this->receivable_account_id,
+            'payable_account_id' => $this->payable_account_id,
             
             // Computed - Balance
             'total_balance' => $this->whenAppended('total_balance', function () {
                 return (float) $this->total_balance;
             }),
             'balance_status' => $this->getBalanceStatus(),
-            'credit_status' => $this->getCreditStatus(),
-            'available_credit' => $this->getAvailableCredit(),
             
             // Statistics
-            'total_invoices' => $this->whenCounted('invoices'),
+            'total_purchase_orders' => $this->whenCounted('purchaseOrders'),
+            'total_bills' => $this->whenCounted('bills'),
             'total_payments' => $this->whenCounted('payments'),
             
             // Status
@@ -97,39 +88,5 @@ class CustomerResource extends JsonResource
         } else {
             return 'overpaid'; // زيادة دفع
         }
-    }
-
-    /**
-     * Get credit status
-     */
-    protected function getCreditStatus(): string
-    {
-        if ($this->credit_limit <= 0) {
-            return 'no_credit'; // بدون حد ائتمان
-        }
-        
-        $balance = $this->total_balance ?? 0;
-        $usedPercentage = ($balance / $this->credit_limit) * 100;
-        
-        if ($balance >= $this->credit_limit) {
-            return 'exceeded'; // تجاوز الحد
-        } elseif ($usedPercentage >= 80) {
-            return 'warning'; // تحذير
-        } else {
-            return 'good'; // جيد
-        }
-    }
-
-    /**
-     * Get available credit
-     */
-    protected function getAvailableCredit(): float
-    {
-        if ($this->credit_limit <= 0) {
-            return 0;
-        }
-        
-        $balance = $this->total_balance ?? 0;
-        return max(0, $this->credit_limit - $balance);
     }
 }

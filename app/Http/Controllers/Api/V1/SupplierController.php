@@ -5,22 +5,21 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
-use App\Http\Requests\Api\CustomerRequest;
-use App\Http\Resources\CustomerResource;
-use App\Models\Customer;
+use App\Http\Requests\Api\SupplierRequest;
+use App\Http\Resources\SupplierResource;
+use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class CustomerController extends ApiController
+class SupplierController extends ApiController
 {
     /**
-     * List customers (paginated)
+     * List suppliers (paginated)
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Customer::query()
-            ->where('company_id', $request->user()->current_company_id)
-            ->with(['priceList:id,name']);
+        $query = Supplier::query()
+            ->where('company_id', $request->user()->current_company_id);
 
         // Search
         if ($request->has('search') && !empty($request->search)) {
@@ -39,15 +38,10 @@ class CustomerController extends ApiController
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        // Filter by price list
-        if ($request->has('price_list_id') && !empty($request->price_list_id)) {
-            $query->where('price_list_id', $request->price_list_id);
-        }
-
         // Filter by balance status
         if ($request->has('has_balance') && $request->boolean('has_balance')) {
-            $query->whereHas('invoices', function ($q) {
-                $q->whereIn('status', ['issued', 'partially_paid', 'overdue'])
+            $query->whereHas('bills', function ($q) {
+                $q->whereIn('status', ['posted', 'partially_paid'])
                   ->where('balance_due', '>', 0);
             });
         }
@@ -55,99 +49,99 @@ class CustomerController extends ApiController
         // Sorting
         $sortField = $request->get('sort_field', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        $allowedSortFields = ['name', 'code', 'created_at', 'credit_limit'];
+        $allowedSortFields = ['name', 'code', 'created_at'];
         
         if (in_array($sortField, $allowedSortFields)) {
             $query->orderBy($sortField, $sortOrder === 'asc' ? 'asc' : 'desc');
         }
 
         // Load counts
-        $query->withCount(['invoices', 'payments']);
+        $query->withCount(['purchaseOrders', 'bills', 'payments']);
 
         $perPage = min((int) $request->get('per_page', 20), 100);
-        $customers = $query->paginate($perPage);
+        $suppliers = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
-            'data' => CustomerResource::collection($customers),
+            'data' => SupplierResource::collection($suppliers),
             'meta' => [
-                'current_page' => $customers->currentPage(),
-                'last_page' => $customers->lastPage(),
-                'per_page' => $customers->perPage(),
-                'total' => $customers->total(),
+                'current_page' => $suppliers->currentPage(),
+                'last_page' => $suppliers->lastPage(),
+                'per_page' => $suppliers->perPage(),
+                'total' => $suppliers->total(),
             ],
         ]);
     }
 
     /**
-     * Show single customer
+     * Show single supplier
      */
     public function show(Request $request, string $id): JsonResponse
     {
-        $customer = Customer::where('company_id', $request->user()->current_company_id)
-            ->with(['priceList', 'receivableAccount'])
-            ->withCount(['invoices', 'payments', 'salesOrders'])
+        $supplier = Supplier::where('company_id', $request->user()->current_company_id)
+            ->with(['payableAccount'])
+            ->withCount(['purchaseOrders', 'bills', 'payments'])
             ->findOrFail($id);
 
-        return $this->success(new CustomerResource($customer));
+        return $this->success(new SupplierResource($supplier));
     }
 
     /**
-     * Create customer
+     * Create supplier
      */
-    public function store(CustomerRequest $request): JsonResponse
+    public function store(SupplierRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $validated['company_id'] = $request->user()->current_company_id;
 
-        $customer = Customer::create($validated);
+        $supplier = Supplier::create($validated);
 
         return $this->success(
-            new CustomerResource($customer->load('priceList')),
-            'تم إنشاء العميل بنجاح',
+            new SupplierResource($supplier),
+            'تم إنشاء المورد بنجاح',
             201
         );
     }
 
     /**
-     * Update customer
+     * Update supplier
      */
-    public function update(CustomerRequest $request, string $id): JsonResponse
+    public function update(SupplierRequest $request, string $id): JsonResponse
     {
-        $customer = Customer::where('company_id', $request->user()->current_company_id)
+        $supplier = Supplier::where('company_id', $request->user()->current_company_id)
             ->findOrFail($id);
 
-        $customer->update($request->validated());
+        $supplier->update($request->validated());
 
         return $this->success(
-            new CustomerResource($customer->fresh()->load('priceList')),
-            'تم تحديث العميل بنجاح'
+            new SupplierResource($supplier->fresh()),
+            'تم تحديث المورد بنجاح'
         );
     }
 
     /**
-     * Delete customer
+     * Delete supplier
      */
     public function destroy(Request $request, string $id): JsonResponse
     {
-        $customer = Customer::where('company_id', $request->user()->current_company_id)
+        $supplier = Supplier::where('company_id', $request->user()->current_company_id)
             ->findOrFail($id);
 
-        // Check if customer has invoices
-        if ($customer->invoices()->exists()) {
+        // Check if supplier has bills or purchase orders
+        if ($supplier->bills()->exists() || $supplier->purchaseOrders()->exists()) {
             return $this->error(
-                'لا يمكن حذف العميل لوجود فواتير مرتبطة به',
+                'لا يمكن حذف المورد لوجود فواتير أو أوامر شراء مرتبطة به',
                 422
             );
         }
 
-        $customer->delete();
+        $supplier->delete();
 
-        return $this->success(null, 'تم حذف العميل بنجاح');
+        return $this->success(null, 'تم حذف المورد بنجاح');
     }
 
     /**
-     * Bulk delete customers
+     * Bulk delete suppliers
      */
     public function bulkDelete(Request $request): JsonResponse
     {
@@ -158,66 +152,65 @@ class CustomerController extends ApiController
 
         $companyId = $request->user()->current_company_id;
         
-        $customers = Customer::where('company_id', $companyId)
+        $suppliers = Supplier::where('company_id', $companyId)
             ->whereIn('id', $request->ids)
             ->get();
 
         $deleted = 0;
         $errors = [];
 
-        foreach ($customers as $customer) {
-            if ($customer->invoices()->exists()) {
-                $errors[] = "العميل {$customer->name} لديه فواتير ولا يمكن حذفه";
+        foreach ($suppliers as $supplier) {
+            if ($supplier->bills()->exists() || $supplier->purchaseOrders()->exists()) {
+                $errors[] = "المورد {$supplier->name} لديه فواتير أو أوامر شراء ولا يمكن حذفه";
                 continue;
             }
             
-            $customer->delete();
+            $supplier->delete();
             $deleted++;
         }
 
         return $this->success([
             'deleted' => $deleted,
             'errors' => $errors,
-        ], "تم حذف {$deleted} عميل بنجاح");
+        ], "تم حذف {$deleted} مورد بنجاح");
     }
 
     /**
-     * Get customer statement (كشف حساب)
+     * Get supplier statement (كشف حساب)
      */
     public function statement(Request $request, string $id): JsonResponse
     {
         $from = $request->get('from', now()->startOfMonth()->toDateString());
         $to = $request->get('to', now()->toDateString());
 
-        $customer = Customer::where('company_id', $request->user()->current_company_id)
+        $supplier = Supplier::where('company_id', $request->user()->current_company_id)
             ->findOrFail($id);
 
         // Get opening balance
-        $openingBalance = $customer->invoices()
-            ->where('invoice_date', '<', $from)
-            ->whereIn('status', ['issued', 'partially_paid', 'overdue'])
+        $openingBalance = $supplier->bills()
+            ->where('bill_date', '<', $from)
+            ->whereIn('status', ['posted', 'partially_paid'])
             ->sum('balance_due');
 
         // Get transactions in period
-        $invoices = $customer->invoices()
-            ->whereBetween('invoice_date', [$from, $to])
-            ->with('invoiceLines')
-            ->orderBy('invoice_date')
+        $bills = $supplier->bills()
+            ->whereBetween('bill_date', [$from, $to])
+            ->orderBy('bill_date')
             ->get()
-            ->map(function ($invoice) {
+            ->map(function ($bill) {
                 return [
-                    'id' => $invoice->id,
-                    'type' => 'invoice',
-                    'date' => $invoice->invoice_date,
-                    'reference' => $invoice->invoice_number,
-                    'description' => 'فاتورة بيع',
-                    'debit' => (float) $invoice->total,
+                    'id' => $bill->id,
+                    'type' => 'bill',
+                    'date' => $bill->bill_date,
+                    'reference' => $bill->bill_number,
+                    'description' => 'فاتورة شراء',
+                    'debit' => (float) $bill->total,
                     'credit' => 0,
-                    'balance' => 0, // will calculate later
+                    'balance' => 0,
                 ];
             });
 
-        $payments = $customer->payments()
+        $payments = $supplier->payments()
             ->whereBetween('payment_date', [$from, $to])
             ->orderBy('payment_date')
             ->get()
@@ -227,7 +220,7 @@ class CustomerController extends ApiController
                     'type' => 'payment',
                     'date' => $payment->payment_date,
                     'reference' => $payment->payment_number ?? '-',
-                    'description' => 'دفعة من العميل',
+                    'description' => 'دفعة للمورد',
                     'debit' => 0,
                     'credit' => (float) $payment->amount,
                     'balance' => 0,
@@ -235,7 +228,7 @@ class CustomerController extends ApiController
             });
 
         // Merge and sort
-        $transactions = $invoices->concat($payments)
+        $transactions = $bills->concat($payments)
             ->sortBy('date')
             ->values();
 
@@ -248,7 +241,7 @@ class CustomerController extends ApiController
         });
 
         return $this->success([
-            'customer' => new CustomerResource($customer),
+            'supplier' => new SupplierResource($supplier),
             'period' => [
                 'from' => $from,
                 'to' => $to,
@@ -260,15 +253,15 @@ class CustomerController extends ApiController
     }
 
     /**
-     * Get all customers (for dropdowns)
+     * Get all suppliers (for dropdowns)
      */
     public function all(Request $request): JsonResponse
     {
-        $customers = Customer::where('company_id', $request->user()->current_company_id)
+        $suppliers = Supplier::where('company_id', $request->user()->current_company_id)
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'code', 'name', 'name_ar']);
 
-        return $this->success($customers);
+        return $this->success($suppliers);
     }
 }

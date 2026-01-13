@@ -38,7 +38,7 @@ interface SettingsState {
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       theme: 'light',
       language: 'ar',
       currency: CURRENCIES[0], // SAR default

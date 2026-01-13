@@ -124,21 +124,29 @@ export interface Category {
 export interface Brand {
   id: string;
   name: string;
+  name_ar?: string;
   logo?: string;
   website?: string;
+  description?: string;
   is_active: boolean;
   company_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Unit
 export interface Unit {
   id: string;
   name: string;
+  name_ar?: string;
   short_name: string;
   base_unit_id?: string;
   conversion_rate: number;
   is_active: boolean;
   company_id: string;
+  baseUnit?: Unit;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Invoice

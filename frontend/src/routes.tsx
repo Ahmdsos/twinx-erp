@@ -9,6 +9,22 @@ const RegisterPage = lazy(() => import('./features/auth/pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./features/auth/pages/ForgotPasswordPage'));
 const DashboardPage = lazy(() => import('./features/dashboard/pages/DashboardPage'));
 
+// Phase 1 Pages
+const ProductsPage = lazy(() => import('./features/products/pages/ProductsPage'));
+const CategoriesPage = lazy(() => import('./features/categories/pages/CategoriesPage'));
+const BrandsPage = lazy(() => import('./features/brands/pages/BrandsPage'));
+const UnitsPage = lazy(() => import('./features/units/pages/UnitsPage'));
+const GeneralSettingsPage = lazy(() => import('./features/settings/pages/GeneralSettingsPage'));
+const CurrencySettingsPage = lazy(() => import('./features/settings/pages/CurrencySettingsPage'));
+
+// Phase 2 Pages - Customers & Suppliers
+const CustomersPage = lazy(() => import('./features/customers/pages/CustomersPage'));
+const CustomerDetailsPage = lazy(() => import('./features/customers/pages/CustomerDetailsPage'));
+const CustomerStatementPage = lazy(() => import('./features/customers/pages/CustomerStatementPage'));
+const SuppliersPage = lazy(() => import('./features/suppliers/pages/SuppliersPage'));
+const SupplierDetailsPage = lazy(() => import('./features/suppliers/pages/SupplierDetailsPage'));
+const SupplierStatementPage = lazy(() => import('./features/suppliers/pages/SupplierStatementPage'));
+
 // Loading component
 const PageLoader = () => (
   <div style={{ 
@@ -65,11 +81,11 @@ const router = createBrowserRouter([
       { path: 'pos', element: <ComingSoon /> },
       { path: 'pos/orders', element: <ComingSoon /> },
 
-      // Inventory
-      { path: 'products', element: <ComingSoon /> },
-      { path: 'categories', element: <ComingSoon /> },
-      { path: 'brands', element: <ComingSoon /> },
-      { path: 'units', element: <ComingSoon /> },
+      // Inventory (Phase 1)
+      { path: 'products', element: withSuspense(ProductsPage) },
+      { path: 'categories', element: withSuspense(CategoriesPage) },
+      { path: 'brands', element: withSuspense(BrandsPage) },
+      { path: 'units', element: withSuspense(UnitsPage) },
       { path: 'stock', element: <ComingSoon /> },
       { path: 'stock-adjustment', element: <ComingSoon /> },
 
@@ -80,12 +96,16 @@ const router = createBrowserRouter([
       { path: 'coupons', element: <ComingSoon /> },
 
       // Purchases
-      { path: 'suppliers', element: <ComingSoon /> },
+      { path: 'suppliers', element: withSuspense(SuppliersPage) },
+      { path: 'suppliers/:id', element: withSuspense(SupplierDetailsPage) },
+      { path: 'suppliers/:id/statement', element: withSuspense(SupplierStatementPage) },
       { path: 'purchase-orders', element: <ComingSoon /> },
       { path: 'purchase-returns', element: <ComingSoon /> },
 
-      // Customers
-      { path: 'customers', element: <ComingSoon /> },
+      // Customers (Phase 2)
+      { path: 'customers', element: withSuspense(CustomersPage) },
+      { path: 'customers/:id', element: withSuspense(CustomerDetailsPage) },
+      { path: 'customers/:id/statement', element: withSuspense(CustomerStatementPage) },
       { path: 'customer-groups', element: <ComingSoon /> },
 
       // Delivery
@@ -113,10 +133,10 @@ const router = createBrowserRouter([
       { path: 'reports/inventory', element: <ComingSoon /> },
       { path: 'reports/financial', element: <ComingSoon /> },
 
-      // Settings
-      { path: 'settings/general', element: <ComingSoon /> },
-      { path: 'settings/company', element: <ComingSoon /> },
-      { path: 'settings/currency', element: <ComingSoon /> },
+      // Settings (Phase 1)
+      { path: 'settings/general', element: withSuspense(GeneralSettingsPage) },
+      { path: 'settings/company', element: withSuspense(GeneralSettingsPage) },
+      { path: 'settings/currency', element: withSuspense(CurrencySettingsPage) },
       { path: 'settings/taxes', element: <ComingSoon /> },
       { path: 'settings/users', element: <ComingSoon /> },
       { path: 'settings/roles', element: <ComingSoon /> },
@@ -136,3 +156,4 @@ const Routes: React.FC = () => {
 };
 
 export default Routes;
+
