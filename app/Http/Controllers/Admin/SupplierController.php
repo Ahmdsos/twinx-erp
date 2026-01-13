@@ -5,59 +5,58 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customer;
+use App\Models\Supplier;
 use App\Services\TenantContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class CustomerController extends Controller
+class SupplierController extends Controller
 {
     public function __construct(
         private TenantContext $tenantContext
     ) {}
 
     /**
-     * Display a listing of customers.
+     * Display a listing of suppliers.
      */
     public function index(Request $request): Response
     {
         $companyId = $this->tenantContext->companyId();
-        $query = Customer::where('company_id', $companyId);
+        $query = Supplier::where('company_id', $companyId);
         
-        // Search - use correct column names (code not customer_number)
+        // Search - use correct column names
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('phone', 'like', "%{$search}%");
             });
         }
         
-        // Filter by active status
+        // Filter by status
         if ($request->has('status') && $request->input('status') !== '') {
             $query->where('is_active', $request->input('status') === 'active');
         }
         
-        $customers = $query->orderBy('name')->paginate(20)->withQueryString();
+        $suppliers = $query->orderBy('name')->paginate(20)->withQueryString();
         
-        // Stats - simplified since balance/customer_type don't exist in schema
+        // Stats - no balance column exists, so simplified
         $stats = [
-            'total' => Customer::where('company_id', $companyId)->count(),
-            'active' => Customer::where('company_id', $companyId)->where('is_active', true)->count(),
-            'total_credit_limit' => Customer::where('company_id', $companyId)->sum('credit_limit') ?? 0,
+            'total' => Supplier::where('company_id', $companyId)->count(),
+            'active' => Supplier::where('company_id', $companyId)->where('is_active', true)->count(),
+            'total_payable' => 0, // Would need to calculate from bills
         ];
         
-        return Inertia::render('Customers/Index', [
-            'customers' => $customers,
+        return Inertia::render('Suppliers/Index', [
+            'suppliers' => $suppliers,
             'stats' => $stats,
             'filters' => $request->only(['search', 'status']),
         ]);
     }
 
     /**
-     * Store a newly created customer.
+     * Store a newly created supplier.
      */
     public function store(Request $request)
     {
@@ -69,7 +68,6 @@ class CustomerController extends Controller
             'email' => 'nullable|email|max:255',
             'vat_number' => 'nullable|string|max:15',
             'cr_number' => 'nullable|string|max:20',
-            'credit_limit' => 'nullable|numeric|min:0',
             'payment_terms' => 'nullable|integer|min:0',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:255',
@@ -78,21 +76,21 @@ class CustomerController extends Controller
         $companyId = $this->tenantContext->companyId();
         
         // Generate code
-        $count = Customer::where('company_id', $companyId)->count() + 1;
-        $validated['code'] = 'C-' . str_pad((string)$count, 5, '0', STR_PAD_LEFT);
+        $count = Supplier::where('company_id', $companyId)->count() + 1;
+        $validated['code'] = 'SUP-' . str_pad((string)$count, 5, '0', STR_PAD_LEFT);
         $validated['company_id'] = $companyId;
         $validated['is_active'] = true;
         
-        Customer::create($validated);
+        Supplier::create($validated);
         
-        return redirect()->route('admin.customers.index')
-            ->with('success', 'تم إضافة العميل بنجاح');
+        return redirect()->route('admin.suppliers.index')
+            ->with('success', 'تم إضافة المورد بنجاح');
     }
 
     /**
-     * Update the specified customer.
+     * Update the specified supplier.
      */
-    public function update(Request $request, Customer $customer)
+    public function update(Request $request, Supplier $supplier)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -102,38 +100,26 @@ class CustomerController extends Controller
             'email' => 'nullable|email|max:255',
             'vat_number' => 'nullable|string|max:15',
             'cr_number' => 'nullable|string|max:20',
-            'credit_limit' => 'nullable|numeric|min:0',
             'payment_terms' => 'nullable|integer|min:0',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:255',
             'is_active' => 'boolean',
         ]);
         
-        $customer->update($validated);
+        $supplier->update($validated);
         
-        return redirect()->route('admin.customers.index')
-            ->with('success', 'تم تحديث بيانات العميل بنجاح');
+        return redirect()->route('admin.suppliers.index')
+            ->with('success', 'تم تحديث بيانات المورد بنجاح');
     }
 
     /**
-     * Remove the specified customer.
+     * Remove the specified supplier.
      */
-    public function destroy(Customer $customer)
+    public function destroy(Supplier $supplier)
     {
-        $customer->delete();
+        $supplier->delete();
         
-        return redirect()->route('admin.customers.index')
-            ->with('success', 'تم حذف العميل بنجاح');
-    }
-    
-    /**
-     * Get customer statement.
-     */
-    public function statement(Customer $customer)
-    {
-        return response()->json([
-            'customer' => $customer,
-            'transactions' => [],
-        ]);
+        return redirect()->route('admin.suppliers.index')
+            ->with('success', 'تم حذف المورد بنجاح');
     }
 }
